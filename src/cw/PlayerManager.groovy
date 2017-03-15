@@ -159,6 +159,15 @@ class PlayerManager implements CSProcess {
 			IPlabel.write("Hi " + playerName + ", you are now enroled in the PAIRS game")
 			IPconfig.write(" ")	
 			
+			/*
+			  		change player manager to ALT
+
+					on turn start set precon started = true
+
+					request a valid point 
+			 */
+			
+			
 			// main loop
 			while (enroled) {
 				
