@@ -187,6 +187,14 @@ class ControllerManager implements CSProcess{
 												 gameId: gameId))
 		}
 		
+		def selectNextTurn = {
+			//TODO: TURNS
+			//foreach player in game 
+			//if no players active, set active first
+			//else
+			//find player who is active, deactivate, activate next
+		}
+		
 		while (true) {
 			statusConfig.write("Creating")
 //			nPairs = generatePairsNumber(minPairs, pairsRange)
@@ -220,13 +228,12 @@ class ControllerManager implements CSProcess{
 							gameRunning = true;
 							playerMap.put(currentPlayerId, [playerName, 0, 1]) // [name, pairs claimed, state]
 							
-							playerToChan.write(new StartTurn())
+							selectNextTurn()
 						}
 						else
 						{
 							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
 						}
-						
 					}
 					else {
 						// no new players can join the game
@@ -259,7 +266,10 @@ class ControllerManager implements CSProcess{
 							//println "cannot claim pair: $p1, $p2"
 						}
 					}	
-					sendGameDetails(id)
+					playerMap.each{ k, v -> 
+						sendGameDetails(k)
+					}
+					//sendGameDetails(id)
 				} else {
 					def withdraw = (WithdrawFromGame)o
 					def id = withdraw.id
