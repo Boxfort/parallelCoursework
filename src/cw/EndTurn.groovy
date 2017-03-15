@@ -2,6 +2,6 @@ package cw
 
 import java.io.Serializable;
 
-class EndTurn {
+class EndTurn implements Serializable{
 
 }

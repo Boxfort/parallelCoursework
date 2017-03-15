@@ -99,11 +99,6 @@ class ControllerManager implements CSProcess{
 			}
 		}
 		
-		def nextTurn = {
-			//Get current player active
-			//set current player false
-			//increment, and set next active
-		}
 		
 		def changePairs = {x, y, colour, p ->
 			def int xPos = offset[0]+(gap*x)+ (side*x)
@@ -189,10 +184,33 @@ class ControllerManager implements CSProcess{
 		
 		def selectNextTurn = {
 			//TODO: TURNS
-			//foreach player in game 
-			//if no players active, set active first
-			//else
-			//find player who is active, deactivate, activate next
+			def activeID = null
+			
+			//No players connected
+			if(playerMap.size() == 0)
+				return
+			
+			playerMap.each{ k, v ->
+				if(v[2] == 1){
+					activeID = k
+				}	
+			}
+			
+			if(activeID != null){
+				//set current active player not active
+				playerMap.get(activeID)[2] = 0
+				//set next player active
+				playerMap.get((activeID + 1) % playerMap.size())[2] = 0
+			}
+			else{
+				//no players active so set first entry to active
+				activeID = 0
+			}	
+			
+			println "active player is now " + activeID + " " + playerMap.get(activeID)[0]
+			
+			//send new turn
+			toPlayers[activeID].write(new StartTurn())
 		}
 		
 		while (true) {
@@ -222,17 +240,17 @@ class ControllerManager implements CSProcess{
 						
 						//A new player is added to player map, players state is set to 0 unless game has started
 						// !! to get a players state use playermap.get(id)[2] !!
-						sendGameDetails(currentPlayerId)
 						if(!gameRunning)
 						{
 							gameRunning = true;
 							playerMap.put(currentPlayerId, [playerName, 0, 1]) // [name, pairs claimed, state]
-							
+							sendGameDetails(currentPlayerId)
 							selectNextTurn()
 						}
 						else
 						{
 							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
+							sendGameDetails(currentPlayerId)
 						}
 					}
 					else {
@@ -269,7 +287,6 @@ class ControllerManager implements CSProcess{
 					playerMap.each{ k, v -> 
 						sendGameDetails(k)
 					}
-					//sendGameDetails(id)
 				} else {
 					def withdraw = (WithdrawFromGame)o
 					def id = withdraw.id
