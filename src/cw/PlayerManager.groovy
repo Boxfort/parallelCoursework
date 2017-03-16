@@ -150,11 +150,18 @@ class PlayerManager implements CSProcess {
 		def pairsMap 	= [null, null]
 		def chosenPairs = [null, null]
 		
+		def currentPair = 0
+		def notMatched = true
 		def active = false
 		
-		def precon = [true, false, false, true]
-		def chanAlt = new ALT([fromController, validPoint, nextButton, withdrawButton])
+		def precon = new boolean[4]
 		
+		precon[0] = true
+		precon[1] = false
+		precon[2] = false
+		precon[3] = true
+		
+		def chanAlt = new ALT([fromController,  validPoint, nextButton, withdrawButton])	
 		
 		if (myPlayerId == -1) {
 			enroled = false
@@ -165,32 +172,28 @@ class PlayerManager implements CSProcess {
 			IPlabel.write("Hi " + playerName + ", you are now enroled in the PAIRS game")
 			IPconfig.write(" ")	
 			
-			/*
-			  		change player manager to ALT
-
-					on turn start set precon started = true
-
-					request a valid point 
-			 */
-			
-			
 			// main loop
 			while (enroled) {
 				
-				/*
-				if(precon[1]){
-					getValidPoint.write (new GetValidPoint( side: side,
-						gap: gap,
-						pairsMap: pairsMap))
-				}
-				
 				def index = chanAlt.priSelect(precon)
+				
+				println "index " + index + " selected"
+				
 				switch(index)
 				{
-					case 1: //fromController
+					case 0: //fromController
+					
+						def o = fromController.read()
+					
 						if(o instanceof StartTurn)
 						{
 							precon[1] = true; //Can now accept validpoint
+							currentPair = 0
+							notMatched = true
+							
+							getValidPoint.write (new GetValidPoint( side: side,
+								gap: gap,
+								pairsMap: pairsMap))
 							
 						} else if (o instanceof GameDetails) {
 							gameDetails = (GameDetails)o
@@ -215,8 +218,9 @@ class PlayerManager implements CSProcess {
 								changePairs(loc[0], loc[1], Color.LIGHT_GRAY, -1)
 							}
 						}
+						println "case 0 done"
 						break
-					case 2: //validPoint
+					case 1: //validPoint
 						def vPoint = ((SquareCoords)validPoint.read()).location
 						chosenPairs[currentPair] = vPoint
 						currentPair = currentPair + 1
@@ -225,44 +229,47 @@ class PlayerManager implements CSProcess {
 						def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 						if ( matchOutcome == 2)  {
 							nextPairConfig.write("SELECT NEXT PAIR")
-							switch (innerAlt.select()){
-								case NEXT:
-									nextButton.read()
-									nextPairConfig.write(" ")
-									def p1 = chosenPairs[0]
-									def p2 = chosenPairs[1]
-									changePairs(p1[0], p1[1], Color.LIGHT_GRAY, -1)
-									changePairs(p2[0], p2[1], Color.LIGHT_GRAY, -1)
-									chosenPairs = [null, null]
-									currentPair = 0
-									break
-								case WITHDRAW:
-									withdrawButton.read()
-									toController.write(new WithdrawFromGame(id: myPlayerId))
-									enroled = false
-									break
-							} // end inner switch
+							precon[1] = false
+							precon[2] = true
+							
 						} else if ( matchOutcome == 1) {
-							
-							println "valid pair"
-							
 							toController.write(new ClaimPair ( id: myPlayerId,
 																	 gameId: gameId,
 															   p1: chosenPairs[0],
 															   p2: chosenPairs[1]))
-							notMatched = false;
+							currentPair = 0
+							chosenPairs = [null, null]
+							println "valid select"
+							getValidPoint.write (new GetValidPoint( side: side,
+								gap: gap,
+								pairsMap: pairsMap))
+						}else{
+							getValidPoint.write (new GetValidPoint( side: side,
+								gap: gap,
+								pairsMap: pairsMap))
 						}
 						break
-					case 3: //end turn button
-						
+					case 2: //end turn button
+						nextButton.read()
+						nextPairConfig.write(" ")
+						def p1 = chosenPairs[0]
+						def p2 = chosenPairs[1]
+						changePairs(p1[0], p1[1], Color.LIGHT_GRAY, -1)
+						changePairs(p2[0], p2[1], Color.LIGHT_GRAY, -1)
+						chosenPairs = [null, null]
+						currentPair = 0
+						notMatched = false;
+						toController.write(new EndTurn())
+						precon[2] = false
 						break
-					case 4: //withdraw button
+					case 3: //withdraw button
 						withdrawButton.read()
 						toController.write(new WithdrawFromGame(id: myPlayerId))
 						enroled = false
 						break
 				}
-				*/
+				
+				/*
 				
 				def o = fromController.read()	//Read in a object from controller
 				
@@ -355,6 +362,7 @@ class PlayerManager implements CSProcess {
 					} // end of while getting two pairs
 				}
 				
+				*/
 					
 			} // end of while enrolled loop
 			IPlabel.write("Goodbye " + playerName + ", please close game window")

@@ -239,6 +239,7 @@ class ControllerManager implements CSProcess{
 						pairsWon[currentPlayerId].write(" " + 0)
 						toPlayers[currentPlayerId] = playerToChan 
 						toPlayers[currentPlayerId].write(new EnrolDetails(id: currentPlayerId) )
+						println "sent enrolment to " + currentPlayerId
 						
 						//A new player is added to player map, players state is set to 0 unless game has started
 						// !! to get a players state use playermap.get(id)[2] !!
@@ -246,7 +247,9 @@ class ControllerManager implements CSProcess{
 						{
 							gameRunning = true;
 							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
+							println "sending game details to " + currentPlayerId
 							sendGameDetails(currentPlayerId)
+							println "sent game details to " + currentPlayerId
 							selectNextTurn()
 						}
 						else
@@ -299,6 +302,9 @@ class ControllerManager implements CSProcess{
 					toPlayers[id] = null
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
+					
+					//if active player, go next turn
+					
 				} else if (o instanceof EndTurn) {
 					selectNextTurn()
 				} // end else if chain
