@@ -174,6 +174,7 @@ class ControllerManager implements CSProcess{
 		def nPairs = 0
 		def pairsUnclaimed = 0
 		def gameId = 0
+		def activePlayer = 0
 		
 		def sendGameDetails = { id ->
 			
@@ -183,36 +184,38 @@ class ControllerManager implements CSProcess{
 		}
 		
 		def selectNextTurn = {
-			//TODO: TURNS
-			def activeID = null
+			//TODO: When player leaves game, the ID's may not be sequential
 			
 			//No players connected
 			if(playerMap.size() == 0)
 				return
+						
+			def playersInGame = []
 			
 			playerMap.each{ k, v ->
-				println "player in game " + v[1]
-				if(v[2] == 1){
-					activeID = k
-				}	
-			}			
-
-			if(activeID == null){
-				println "no active player, setting"
-				activeID = 0
-				playerMap.get(activeID)[2] = 1
-				println "player 0 set active"
-			}else{
-				println "get next player"
-				//Get next player
-				playerMap.get(activeID)[2] = 0
-				activeID = (activeID + 1) % playerMap.size()
-				playerMap.get(activeID)[2] = 1
-				println "player " + (activeID) + "set active"
+				playersInGame.add(k)
 			}
 			
+			//if theres only 1 players in game, start their turn again
+			//else get their index, and loop
+				
+			if(playersInGame.size() == 1){
+				activePlayer = playersInGame.get(0)
+				toPlayers[activePlayer].write(new StartTurn())
+				return
+			}
+
+			for(int i = playersInGame.indexOf(activePlayer); i < (playersInGame.size() + playersInGame.indexOf(activePlayer)); i++){
+				def lookAt = i % playersInGame.size()
+				if(activePlayer != playersInGame.get(lookAt)){
+					activePlayer = playersInGame.get(lookAt)
+					break
+				}
+			}
+			
+			println "starting player "+activePlayer+" turn"
 			//send new turn
-			toPlayers[activeID].write(new StartTurn())
+			toPlayers[activePlayer].write(new StartTurn())
 		}
 		
 		while (true) {
@@ -243,19 +246,13 @@ class ControllerManager implements CSProcess{
 						
 						//A new player is added to player map, players state is set to 0 unless game has started
 						// !! to get a players state use playermap.get(id)[2] !!
-						if(!gameRunning)
+
+						playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
+						sendGameDetails(currentPlayerId)
+						
+						if(playerMap.size() == 1)//only player in 
 						{
-							gameRunning = true;
-							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
-							println "sending game details to " + currentPlayerId
-							sendGameDetails(currentPlayerId)
-							println "sent game details to " + currentPlayerId
 							selectNextTurn()
-						}
-						else
-						{
-							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
-							sendGameDetails(currentPlayerId)
 						}
 					}
 					else {
@@ -302,8 +299,15 @@ class ControllerManager implements CSProcess{
 					toPlayers[id] = null
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
+
+					println "Player exiting game"
+					
+					playerMap.remove(id)
 					
 					//if active player, go next turn
+					if(id == activePlayer){
+						selectNextTurn()
+					}
 					
 				} else if (o instanceof EndTurn) {
 					selectNextTurn()
