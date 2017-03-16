@@ -191,23 +191,25 @@ class ControllerManager implements CSProcess{
 				return
 			
 			playerMap.each{ k, v ->
+				println "player in game " + v[1]
 				if(v[2] == 1){
 					activeID = k
 				}	
-			}
-			
-			if(activeID != null){
-				//set current active player not active
-				playerMap.get(activeID)[2] = 0
-				//set next player active
-				playerMap.get((activeID + 1) % playerMap.size())[2] = 0
-			}
-			else{
-				//no players active so set first entry to active
+			}			
+
+			if(activeID == null){
+				println "no active player, setting"
 				activeID = 0
-			}	
-			
-			println "active player is now " + activeID + " " + playerMap.get(activeID)[0]
+				playerMap.get(activeID)[2] = 1
+				println "player 0 set active"
+			}else{
+				println "get next player"
+				//Get next player
+				playerMap.get(activeID)[2] = 0
+				activeID = (activeID + 1) % playerMap.size()
+				playerMap.get(activeID)[2] = 1
+				println "player " + (activeID) + "set active"
+			}
 			
 			//send new turn
 			toPlayers[activeID].write(new StartTurn())
@@ -243,7 +245,7 @@ class ControllerManager implements CSProcess{
 						if(!gameRunning)
 						{
 							gameRunning = true;
-							playerMap.put(currentPlayerId, [playerName, 0, 1]) // [name, pairs claimed, state]
+							playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
 							sendGameDetails(currentPlayerId)
 							selectNextTurn()
 						}
@@ -287,7 +289,7 @@ class ControllerManager implements CSProcess{
 					playerMap.each{ k, v -> 
 						sendGameDetails(k)
 					}
-				} else {
+				} else if (o instanceof WithdrawFromGame) {
 					def withdraw = (WithdrawFromGame)o
 					def id = withdraw.id
 					def playerState = playerMap.get(id)
@@ -297,6 +299,8 @@ class ControllerManager implements CSProcess{
 					toPlayers[id] = null
 					availablePlayerIds << id
 					availablePlayerIds =  availablePlayerIds.sort().reverse()
+				} else if (o instanceof EndTurn) {
+					selectNextTurn()
 				} // end else if chain
 			} // while running
 			createBoard()
