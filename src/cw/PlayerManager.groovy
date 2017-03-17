@@ -17,6 +17,7 @@ class PlayerManager implements CSProcess {
 	ChannelOutput IPlabel
 	ChannelInput IPfield
 	ChannelOutput IPconfig
+	ChannelOutput turnLabel
 	ChannelInput withdrawButton
 	ChannelInput nextButton
 	ChannelOutput getValidPoint
@@ -209,6 +210,8 @@ class PlayerManager implements CSProcess {
 							pairsMap = gameDetails.pairsSpecification
 							def prevActive = activePlayer
 							activePlayer = gameDetails.activePlayer
+							
+							turnLabel.write("It is " + activePlayer[1] + "'s turn.")
 							
 							if(prevActive == null)
 								prevActive = activePlayer

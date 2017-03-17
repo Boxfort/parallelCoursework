@@ -38,6 +38,7 @@ class Player implements CSProcess {
 		def validPoint = Channel.createOne2One()
 		def receivePoint = Channel.createOne2One()
 		def getPoint = Channel.createOne2One()
+		def turnChannel = Channel.createOne2One()
 
 		def network = [ new PlayerManager (dList: dList,
 										   IPlabel: IPlabelConfig.out(),
@@ -50,7 +51,8 @@ class Player implements CSProcess {
 										   getValidPoint: getValidPoint.out(),
 										   validPoint: validPoint.in(),
 										   nextPairConfig: nextPairConfig.out(),
-										   ip: this.ip
+										   ip: this.ip,
+										   turnLabel: turnChannel.out()
 										  ),
 						new PlayerInterface (gameCanvas: gameCanvas,
 										     IPlabel: IPlabelConfig.in(),
@@ -61,7 +63,8 @@ class Player implements CSProcess {
 										     nextButton: nextButtonChannel.out(),
 										     withdrawButton: withdrawButtonChannel.out(),
 											 mouseEvent: mouseEvent.out(),
-											 nextPairConfig: nextPairConfig.in()
+											 nextPairConfig: nextPairConfig.in(),
+											 turnLabelci: turnChannel.in()
 											 ),
 						new Matcher ( getValidPoint: getValidPoint.in(),
 									  validPoint: validPoint.out(),

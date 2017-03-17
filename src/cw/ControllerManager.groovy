@@ -181,7 +181,7 @@ class ControllerManager implements CSProcess{
 			toPlayers[id].write(new GameDetails( playerDetails: playerMap,
 												  pairsSpecification: pairsMap,
 												 gameId: gameId,
-												 activePlayer: activePlayer))
+												 activePlayer: [activePlayer, playerMap.get(activePlayer)[0]]))
 		}
 		
 		def selectNextTurn = {
@@ -309,7 +309,6 @@ class ControllerManager implements CSProcess{
 					
 					playerMap.remove(id)
 					
-					//if active player, go next turn
 					if(id == activePlayer){
 						selectNextTurn()
 					}

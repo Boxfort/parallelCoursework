@@ -9,6 +9,7 @@ import org.jcsp.groovy.*
 class PlayerInterface implements CSProcess{
 	ActiveCanvas gameCanvas
 	ChannelInput IPlabel
+	ChannelInput turnLabelci
 	ChannelInput IPconfig
 	ChannelOutput IPfield
 	ChannelInputList playerNames
@@ -23,6 +24,8 @@ class PlayerInterface implements CSProcess{
 		def mainFrame = root.getActiveFrame()
 		mainFrame.setSize(900, 850)
 		def label = new ActiveLabel(IPlabel)
+		def turnLabel = new ActiveLabel(turnLabelci)
+		turnLabel.setText("")
 		label.setAlignment(Label.RIGHT)
 		def text = new ActiveTextEnterField(IPconfig, IPfield, " ")
 		def continueButton = new ActiveButton(nextPairConfig, nextButton, "                   ")
@@ -32,7 +35,8 @@ class PlayerInterface implements CSProcess{
 		gameCanvas.addMouseEventChannel(mouseEvent)
 		
 		def labelContainer = new Container()
-		labelContainer.setLayout(new GridLayout(1,2))
+		labelContainer.setLayout(new GridLayout(1,3))
+		labelContainer.add(turnLabel)
 		labelContainer.add(label)
 		labelContainer.add(text.getActiveTextField())
 		
@@ -71,7 +75,7 @@ class PlayerInterface implements CSProcess{
 		
 		mainFrame.pack()
 		mainFrame.setVisible(true)	
-		def network = [root, gameCanvas, label, text, withdrawButton, continueButton]	
+		def network = [root, gameCanvas, label, turnLabel, text, withdrawButton, continueButton]	
 		network = network + playerNameSpaces + playerWonSpaces
 		new PAR(network).run()
 	}
