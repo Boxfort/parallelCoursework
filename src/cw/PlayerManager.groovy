@@ -149,13 +149,16 @@ class PlayerManager implements CSProcess {
 		def playerMap 	= [null, null]
 		def pairsMap 	= [null, null]
 		def chosenPairs = [null, null]
-		
 		def currentPair = 0
 		def notMatched = true
 		def active = false
+		def vPoint
+		def pairData
+		def flipChosenPairs = [null, null]
+		def flipCurrentPair = 0
+		def activePlayer = null
 		
 		def precon = new boolean[4]
-		
 		precon[0] = true
 		precon[1] = false
 		precon[2] = false
@@ -198,13 +201,18 @@ class PlayerManager implements CSProcess {
 						} else if (o instanceof GameDetails) {
 							gameDetails = (GameDetails)o
 							println "DRAW BOARD!"
-							chosenPairs = [null, null]
 							createBoard()
 							dList.change (display, 0)
 							gameId = gameDetails.gameId
 							IPconfig.write("Playing Game Number - " + gameId)
 							playerMap = gameDetails.playerDetails
 							pairsMap = gameDetails.pairsSpecification
+							def prevActive = activePlayer
+							activePlayer = gameDetails.activePlayer
+							
+							if(prevActive == null)
+								prevActive = activePlayer
+								
 							def playerIds = playerMap.keySet()
 							playerIds.each { p ->
 								def pData = playerMap.get(p)
@@ -217,17 +225,55 @@ class PlayerManager implements CSProcess {
 							pairLocs.each {loc ->
 								changePairs(loc[0], loc[1], Color.LIGHT_GRAY, -1)
 							}
+							
+							//If the players was in the middle of a selection during redraw make sure the selection is redrawn
+							if(chosenPairs != [null,null]){
+								changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
+							}
+							
+							//Player turn not ended redraw flips
+							if(prevActive == activePlayer && flipChosenPairs != [null, null]){
+								println "SOME CARDS ACTIVE, GET TO FLIPPIN BOIS"
+								if(flipChosenPairs[0] != null){
+									def flipData = pairsMap.get(flipChosenPairs[0])
+									if(flipData == null)
+										break
+									
+									changePairs(flipChosenPairs[0][0], flipChosenPairs[0][1], flipData[1], flipData[0])
+								}
+								if(flipChosenPairs[1] != null){
+									def flipData = pairsMap.get(flipChosenPairs[1])
+									if(flipData == null)
+										break
+										
+									changePairs(flipChosenPairs[1][0], flipChosenPairs[1][1], flipData[1], flipData[0])
+								}
+							}else{
+								
+								flipChosenPairs = [null, null]
+								flipCurrentPair = 0
+							}
+						} else if (o instanceof FlipCard){
+							def flipCard = (FlipCard)o
+							def flipData = pairsMap.get(flipCard.vPoint)
+							
+							flipChosenPairs[flipCurrentPair] = flipCard.vPoint
+							println (flipChosenPairs)
+							flipCurrentPair = flipCurrentPair + 1
+							
+							changePairs(flipCard.vPoint[0], flipCard.vPoint[1], flipData[1], flipData[0])
 						}
 						println "case 0 done"
 						break
 					case 1: //validPoint
-						def vPoint = ((SquareCoords)validPoint.read()).location
+						vPoint = ((SquareCoords)validPoint.read()).location
 						chosenPairs[currentPair] = vPoint
 						currentPair = currentPair + 1
-						def pairData = pairsMap.get(vPoint)
+						pairData = pairsMap.get(vPoint)
 						changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
 						def matchOutcome = pairsMatch(pairsMap, chosenPairs)
 						if ( matchOutcome == 2)  {
+							toController.write(new FlipCard(vPoint, myPlayerId))
 							nextPairConfig.write("SELECT NEXT PAIR")
 							precon[1] = false
 							precon[2] = true
@@ -244,6 +290,7 @@ class PlayerManager implements CSProcess {
 								gap: gap,
 								pairsMap: pairsMap))
 						}else{
+							toController.write(new FlipCard(vPoint, myPlayerId))
 							getValidPoint.write (new GetValidPoint( side: side,
 								gap: gap,
 								pairsMap: pairsMap))
@@ -268,101 +315,6 @@ class PlayerManager implements CSProcess {
 						enroled = false
 						break
 				}
-				
-				/*
-				
-				def o = fromController.read()	//Read in a object from controller
-				
-				if(o instanceof StartTurn)
-				{
-					active = true;
-				}
-				else if(o instanceof GameDetails)
-				{
-					gameDetails = (GameDetails)o
-					println "DRAW BOARD!"
-					chosenPairs = [null, null]
-					createBoard()
-					dList.change (display, 0)
-					gameId = gameDetails.gameId
-					IPconfig.write("Playing Game Number - " + gameId)
-					playerMap = gameDetails.playerDetails
-					pairsMap = gameDetails.pairsSpecification
-					def playerIds = playerMap.keySet()
-					playerIds.each { p ->
-						def pData = playerMap.get(p)
-						playerNames[p].write(pData[0])
-						pairsWon[p].write(" " + pData[1])
-					}
-					
-					// now use pairsMap to create the board
-					def pairLocs = pairsMap.keySet()
-					pairLocs.each {loc ->
-						changePairs(loc[0], loc[1], Color.LIGHT_GRAY, -1)
-					}
-				}
-				
-				if(active){
-					//START THE TURN
-					def currentPair = 0
-					def notMatched = true
-					while ((chosenPairs[1] == null) && (enroled) && (notMatched)) {
-						
-						println "make selection"
-						getValidPoint.write (new GetValidPoint( side: side,
-																gap: gap,
-																pairsMap: pairsMap))
-						switch ( outerAlt.select() ) {
-							case WITHDRAW:
-								withdrawButton.read()
-								toController.write(new WithdrawFromGame(id: myPlayerId))
-								enroled = false
-								break
-							case VALIDPOINT:
-								def vPoint = ((SquareCoords)validPoint.read()).location
-								chosenPairs[currentPair] = vPoint
-								currentPair = currentPair + 1
-								def pairData = pairsMap.get(vPoint)
-								changePairs(vPoint[0], vPoint[1], pairData[1], pairData[0])
-								def matchOutcome = pairsMatch(pairsMap, chosenPairs)
-								if ( matchOutcome == 2)  {
-									nextPairConfig.write("SELECT NEXT PAIR")
-									switch (innerAlt.select()){
-										case NEXT:
-											active = false
-											nextButton.read()
-											nextPairConfig.write(" ")
-											def p1 = chosenPairs[0]
-											def p2 = chosenPairs[1]
-											changePairs(p1[0], p1[1], Color.LIGHT_GRAY, -1)
-											changePairs(p2[0], p2[1], Color.LIGHT_GRAY, -1)
-											chosenPairs = [null, null]
-											currentPair = 0
-											notMatched = false;
-											toController.write(new EndTurn())
-											break
-										case WITHDRAW:
-											withdrawButton.read()
-											toController.write(new WithdrawFromGame(id: myPlayerId))
-											enroled = false
-											break
-									} // end inner switch
-								} else if ( matchOutcome == 1) {
-									
-									println "valid pair"
-									
-									toController.write(new ClaimPair ( id: myPlayerId,
-																			 gameId: gameId,
-																	   p1: chosenPairs[0],
-																	   p2: chosenPairs[1]))
-									notMatched = false;
-								}
-								break
-						}// end of outer switch
-					} // end of while getting two pairs
-				}
-				
-				*/
 					
 			} // end of while enrolled loop
 			IPlabel.write("Goodbye " + playerName + ", please close game window")

@@ -180,7 +180,8 @@ class ControllerManager implements CSProcess{
 			
 			toPlayers[id].write(new GameDetails( playerDetails: playerMap,
 												  pairsSpecification: pairsMap,
-												 gameId: gameId))
+												 gameId: gameId,
+												 activePlayer: activePlayer))
 		}
 		
 		def selectNextTurn = {
@@ -248,7 +249,11 @@ class ControllerManager implements CSProcess{
 						// !! to get a players state use playermap.get(id)[2] !!
 
 						playerMap.put(currentPlayerId, [playerName, 0, 0]) // [name, pairs claimed, state]
-						sendGameDetails(currentPlayerId)
+						//sendGameDetails(currentPlayerId)
+						
+						playerMap.each{ k, v ->
+							sendGameDetails(k)
+						}
 						
 						if(playerMap.size() == 1)//only player in 
 						{
@@ -309,9 +314,23 @@ class ControllerManager implements CSProcess{
 						selectNextTurn()
 					}
 					
+					playerMap.each{ k, v ->
+						sendGameDetails(k)
+					}
+					
 				} else if (o instanceof EndTurn) {
 					selectNextTurn()
-				} // end else if chain
+					playerMap.each{ k, v ->
+						sendGameDetails(k)
+					}
+				} else if (o instanceof FlipCard) {
+					def flipCard = (FlipCard)o
+					playerMap.each{ k, v ->
+						if(flipCard.id != k)
+							toPlayers[k].write(o)
+					}
+				}// end else if chain
+				
 			} // while running
 			createBoard()
 			dList.change(display, 0)	
