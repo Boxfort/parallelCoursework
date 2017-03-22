@@ -229,6 +229,9 @@ class ControllerManager implements CSProcess{
 			createPairs (nPairs)
 			statusConfig.write("Running")
 			def running = (pairsUnclaimed != 0)
+			playerMap.each{ k, v ->
+				sendGameDetails(k)
+			}
 			while (running){
 				def o = fromPlayers.read()
 				if ( o instanceof EnrolPlayer) {
